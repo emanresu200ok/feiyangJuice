@@ -342,6 +342,7 @@ func NewClient(uri string, conf *Config) Meta {
 	if !strings.Contains(uri, "://") {
 		uri = "redis://" + uri
 	}
+	logger.Infof("push success.")
 	logger.Infof("Meta address: %s", removePassword(uri))
 	if os.Getenv("META_PASSWORD") != "" {
 		p := strings.Index(uri, ":@")
