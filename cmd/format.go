@@ -143,8 +143,6 @@ func format(c *cli.Context) error {
 	if c.Args().Len() < 1 {
 		logger.Fatalf("Meta URL and name are required")
 	}
-	m := meta.NewClient(c.Args().Get(0), &meta.Config{Retries: 2})
-
 	if c.Args().Len() < 2 {
 		logger.Fatalf("Please give it a name")
 	}
@@ -158,12 +156,6 @@ func format(c *cli.Context) error {
 	if compressor == nil {
 		logger.Fatalf("Unsupported compress algorithm: %s", c.String("compress"))
 	}
-	if c.Bool("no-update") {
-		if _, err := m.Load(); err == nil {
-			return nil
-		}
-	}
-
 	format := meta.Format{
 		Name:        name,
 		UUID:        uuid.New().String(),
@@ -188,6 +180,13 @@ func format(c *cli.Context) error {
 
 	if format.Storage == "file" && !strings.HasSuffix(format.Bucket, "/") {
 		format.Bucket += "/"
+	}
+	m := meta.NewClient_lwj(&meta.Config{Retries: 2}, format.AccessKey, format.SecretKey)
+
+	if c.Bool("no-update") {
+		if _, err := m.Load(); err == nil {
+			return nil
+		}
 	}
 
 	keyPath := c.String("encrypt-rsa-key")

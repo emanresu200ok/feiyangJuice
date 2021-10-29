@@ -16,6 +16,8 @@
 package meta
 
 import (
+	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -335,6 +337,58 @@ var metaDrivers = make(map[string]Creator)
 
 func Register(name string, register Creator) {
 	metaDrivers[name] = register
+}
+
+// NewClient creates a Meta client for given uri.
+func NewClient_lwj(conf *Config, ak string, sk string) Meta {
+	uri := ""
+	fi, err := os.Open("/home/herentian/juiceFs/aksk_redis")
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		panic(err)
+	}
+	defer fi.Close()
+
+	br := bufio.NewReader(fi)
+	for {
+		a, _, c := br.ReadLine()
+		if c == io.EOF {
+			break
+		}
+		//fmt.Println(string(a))
+		string_slice := strings.Split(string(a), " ")
+		ak_get := string_slice[0]
+		sk_get := string_slice[1]
+		redis_path := string_slice[2]
+		if ak == ak_get && sk == sk_get {
+			uri = redis_path
+		}
+	}
+
+	if !strings.Contains(uri, "://") {
+		uri = "redis://" + uri
+	}
+	logger.Infof("Meta address: %s", removePassword(uri))
+	if os.Getenv("META_PASSWORD") != "" {
+		p := strings.Index(uri, ":@")
+		if p > 0 {
+			uri = uri[:p+1] + os.Getenv("META_PASSWORD") + uri[p+1:]
+		}
+	}
+	p := strings.Index(uri, "://")
+	if p < 0 {
+		logger.Fatalf("invalid uri: %s", uri)
+	}
+	driver := uri[:p]
+	f, ok := metaDrivers[driver]
+	if !ok {
+		logger.Fatalf("Invalid meta driver: %s", driver)
+	}
+	m, err := f(driver, uri[p+3:], conf)
+	if err != nil {
+		logger.Fatalf("Meta is not available: %s", err)
+	}
+	return m
 }
 
 // NewClient creates a Meta client for given uri.
